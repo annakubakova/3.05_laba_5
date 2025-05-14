@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Management</title>
+    <style>
+        :root {
+            --primary-color: #c29cdf;
+            --secondary-color: #f8f9fa;
+            --text-color: #333;
+            --light-gray: #e9ecef;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 20px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3a56d4;
+        }
+
+        #user-list {
+            list-style: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #user-list li {
+            padding: 10px;
+            border-bottom: 1px solid var(--light-gray);
+            transition: background-color 0.2s;
+        }
+
+        #user-list li:hover {
+            background-color: var(--secondary-color);
+        }
+
+        pre {
+            background-color: var(--light-gray);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            overflow-x: auto;
+            max-height: 200px;
+        }
+
+        .users-card {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>User Management System</h1>
+    
+    <div class="container">
+        <!-- Users List -->
+        <div class="card users-card">
+            <h2>Users List</h2>
+            <ul id="user-list"></ul>
+        </div>
+
+        <!-- Create User -->
+        <div class="card">
+            <h2>Create User</h2>
+            <form id="create-user-form">
+                <input type="text" id="username" placeholder="Username" required />
+                <input type="email" id="email" placeholder="Email" required />
+                <input type="text" id="full_name" placeholder="Full Name" />
+                <input type="password" id="password" placeholder="Password" required />
+                <button type="submit">Create User</button>
+            </form>
+        </div>
+
+        <!-- Update User -->
+        <div class="card">
+            <h2>Update User</h2>
+            <form id="update-user-form">
+                <input type="number" id="update-user-id" placeholder="User ID" required />
+                <input type="text" id="update-username" placeholder="Username" />
+                <input type="email" id="update-email" placeholder="Email" />
+                <input type="text" id="update-full_name" placeholder="Full Name" />
+                <input type="password" id="update-password" placeholder="Password" />
+                <button type="submit">Update User</button>
+            </form>
+        </div>
+
+        <!-- Delete User -->
+        <div class="card">
+            <h2>Delete User</h2>
+            <form id="delete-user-form">
+                <input type="number" id="delete-user-id" placeholder="User ID" required />
+                <button type="submit">Delete User</button>
+            </form>
+        </div>
+
+        <!-- Login -->
+        <div class="card">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="text" id="login-username" placeholder="Username" required />
+                <input type="password" id="login-password" placeholder="Password" required />
+                <button type="submit">Login</button>
+            </form>
+        </div>
+
+        <!-- User Info -->
+        <div class="card">
+            <h2>Current User Info</h2>
+            <pre id="userInfo">Your information will appear here after login.</pre>
+            <button onclick="getUserInfo()">Get My Info</button>
+        </div>
+    </div>
+
+    <script>
+        const apiBaseUrl = "http://localhost:8000";
+        let accessToken = '';
+
+        async function fetchUsers() {
+            const response = await fetch(`${apiBaseUrl}/users/`);
+            const users = await response.json();
+            const userList = document.getElementById("user-list");
+            userList.innerHTML = "";
+            users.forEach((user) => {
+                const li = document.createElement("li");
+                li.textContent = `${user.id}: ${user.username} (${user.email})`;
+                userList.appendChild(li);
+            });
+        }
+
+        document.getElementById("create-user-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const full_name = document.getElementById("full_name").value;
+            const password = document.getElementById("password").value;
+
+            const response = await fetch(`${apiBaseUrl}/register/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, full_name, password }),
+            });
+
+            if (response.ok) {
+                alert("User created successfully");
+                fetchUsers();
+            } else {
+                alert("Error creating user");
+            }
+        });
+
+        document.getElementById("update-user-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById("update-user-id").value;
+            const username = document.getElementById("update-username").value;
+            const email = document.getElementById("update-email").value;
+            const full_name = document.getElementById("update-full_name").value;
+            const password = document.getElementById("update-password").value;
+
+            const response = await fetch(`${apiBaseUrl}/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, full_name, password }),
+            });
+
+            if (response.ok) {
+                alert("User updated successfully");
+                fetchUsers();
+            } else {
+                alert("Error updating user");
+            }
+        });
+
+        document.getElementById("delete-user-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById("delete-user-id").value;
+
+            const response = await fetch(`${apiBaseUrl}/users/${userId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                alert("User deleted successfully");
+                fetchUsers();
+            } else {
+                alert("Error deleting user");
+            }
+        });
+
+        document.getElementById("login-form").addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const username = document.getElementById("login-username").value;
+            const password = document.getElementById("login-password").value;
+
+            const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+            const body = new URLSearchParams({
+                grant_type: "password",
+                username: username,
+                password: password,
+            });
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/token`, {
+                    method: "POST",
+                    headers: headers,
+                    body: body,
+                });
+
+                const data = await response.json();
+                if (data.access_token) {
+                    accessToken = data.access_token;
+                    alert("Login successful! Token saved.");
+                } else {
+                    alert("Login failed!");
+                }
+            } catch (error) {
+                console.error("Request error:", error);
+                alert("Request error!");
+            }
+        });
+
+        async function getUserInfo() {
+            if (!accessToken) {
+                document.getElementById('userInfo').textContent = "Please login first!";
+                return;
+            }
+
+            const response = await fetch(`${apiBaseUrl}/users/me`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+
+            const data = await response.json();
+            document.getElementById('userInfo').textContent = JSON.stringify(data, null, 2);
+        }
+
+        fetchUsers();
+    </script>
+</body>
+</html>
